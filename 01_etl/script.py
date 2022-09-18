@@ -1,4 +1,5 @@
 import datetime
+import time
 import os.path
 
 import elasticsearch
@@ -48,4 +49,6 @@ if __name__ == '__main__':
         os.makedirs('./modify')
 
     es = elasticsearch.Elasticsearch(es_dsl, request_timeout=300)
-    main()
+    while True:
+        main()
+        time.sleep(5)

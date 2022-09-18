@@ -1,0 +1,35 @@
+version: '3'
+services:
+  db:
+    restart: always
+    image: postgres
+    container_name: postgres1
+    environment:
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=123qwe
+      - POSTGRES_DB=movies_database
+      - POSTGRES_PORT=5432
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+  elastic:
+    image: docker.io/elastic/elasticsearch:7.7.0
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+
+  etl:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+      - elastic
+    env_file:
+      - ./.env
+
+volumes:
+  postgres_data:

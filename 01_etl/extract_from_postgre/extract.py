@@ -2,12 +2,13 @@ import datetime
 import json
 
 import psycopg2
+import psycopg2.extras
 from config import logger, psg_dsl
 
 
 def extract_from_psql():
     conn = psycopg2.connect(**psg_dsl)
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
         cursor.execute("""
                 SELECT film_work.id,
@@ -32,8 +33,8 @@ def extract_from_psql():
                 LEFT OUTER JOIN person ON (person_film_work.person_id = person.id)
                 GROUP BY film_work.id, film_work.title, film_work.description, film_work.rating
                 """)
-        records = cursor.fetchall()
-        return records
+        while records := cursor.fetchmany(size=100):
+            return records
     except (Exception, psycopg2.DatabaseError) as error:
         logger.error(error)
     finally:
@@ -88,12 +89,12 @@ def check_change():
         LEFT OUTER JOIN genre ON (genre_film_work.genre_id = genre.id)
         LEFT OUTER JOIN person_film_work ON (film_work.id = person_film_work.film_work_id)
         LEFT OUTER JOIN person ON (person_film_work.person_id = person.id)
-        WHERE film_work.modified > '%s'
+        WHERE film_work.modified > '%s' OR person.modified > '%s' OR genre.modified > '%s'
         GROUP BY film_work.id, film_work.title, film_work.description, film_work.rating
         """ % last_mod)
-        row = cursor.fetchall()
-        set_set_last_change_date()
-        return row
+        while records := cursor.fetchmany(size=100):
+            set_set_last_change_date()
+            return records
     except (Exception, psycopg2.DatabaseError) as error:
         return error
     finally:
